@@ -1,0 +1,2041 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>學生課堂輕微不當行為記錄系統 | Student Minor Misbehavior Tracker</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* 自訂字型與滾動條 */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="h-full text-slate-800 flex flex-col">
+
+    <!-- 導航欄 / Navigation Bar -->
+    <header class="bg-indigo-700 text-white shadow-md shrink-0">
+        <div class="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white/10 p-2 rounded-lg">
+                    <i data-lucide="clipboard-signature" class="w-6 h-6 text-yellow-300 animate-pulse"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-bold tracking-tight">學生課堂行為記錄系統</h1>
+                    <p class="text-xs text-indigo-200">Student Minor Misbehavior Tracker</p>
+                </div>
+            </div>
+            
+            <!-- 頂部頁籤切換 -->
+            <nav class="flex space-x-1 bg-indigo-800/50 p-1 rounded-xl">
+                <button onclick="switchTab('tracker')" id="tab-tracker" class="px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition duration-200 bg-white text-indigo-900 shadow">
+                    <span class="flex items-center space-x-1">
+                        <i data-lucide="users" class="w-4 h-4"></i>
+                        <span class="hidden xs:inline">課堂記錄</span><span class="inline xs:hidden">記錄</span>
+                    </span>
+                </button>
+                <button onclick="switchTab('settings')" id="tab-settings" class="px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition duration-200 text-indigo-100 hover:bg-indigo-600/50">
+                    <span class="flex items-center space-x-1">
+                        <i data-lucide="settings" class="w-4 h-4"></i>
+                        <span class="hidden xs:inline">系統設置</span><span class="inline xs:hidden">設置</span>
+                    </span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- 主要內容區 / Main Content Area -->
+    <main class="flex-1 overflow-y-auto max-w-7xl w-full mx-auto p-3 sm:p-6 lg:p-8">
+        
+        <!-- ================= TAB 1: TRACKER 課堂記錄 ================= -->
+        <section id="view-tracker" class="space-y-6">
+            <!-- 班別選擇與快速統計 / Class Selector & Overview -->
+            <div class="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-slate-100 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+                <div class="w-full md:w-auto">
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+                        選擇班別 / Select Class
+                    </label>
+                    <div class="relative">
+                        <select id="tracker-class-select" onchange="loadClassStudents()" class="w-full sm:w-64 pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 appearance-none">
+                            <!-- 動態載入班別 -->
+                        </select>
+                        <div class="absolute left-3 top-3.5 text-slate-400">
+                            <i data-lucide="graduation-cap" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 班級狀態概覽卡片 / Class Summary -->
+                <div class="grid grid-cols-3 gap-3 w-full md:w-auto">
+                    <div class="bg-emerald-50 rounded-xl p-3 text-center border border-emerald-100 min-w-[90px]">
+                        <span class="block text-xs text-emerald-600 font-medium">總人數 / Total</span>
+                        <span id="stat-total-students" class="text-xl font-bold text-emerald-800">0</span>
+                    </div>
+                    <div class="bg-amber-50 rounded-xl p-3 text-center border border-amber-100 min-w-[90px]">
+                        <span class="block text-xs text-amber-600 font-medium">需跟進 / Alert</span>
+                        <span id="stat-follow-up" class="text-xl font-bold text-amber-800">0</span>
+                    </div>
+                    <div class="bg-indigo-50 rounded-xl p-3 text-center border border-indigo-100 min-w-[90px]">
+                        <span class="block text-xs text-indigo-600 font-medium">今日記錄 / Today</span>
+                        <span id="stat-today-records" class="text-xl font-bold text-indigo-800">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 學生列表與操作模式切換 -->
+            <div>
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                    <div class="space-y-0.5">
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center space-x-2">
+                            <span>學生名單及記錄</span>
+                            <span class="text-sm font-normal text-slate-500">/ Student Roster</span>
+                        </h2>
+                        <span id="tracker-mode-desc" class="text-xs text-slate-400 block">點擊學生可直接快速新增記錄 / Click card to add record</span>
+                    </div>
+                    
+                    <!-- 操作按鈕區 -->
+                    <div id="batch-toggle-container" class="w-full sm:w-auto flex flex-wrap gap-2">
+                        <!-- 簡潔模式切換 (僅批量模式下顯示) -->
+                        <button onclick="toggleCompactView()" id="btn-compact-view" class="hidden px-3 py-2 border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold rounded-xl transition duration-200 flex items-center space-x-1 shadow-sm">
+                            <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
+                            <span id="btn-compact-text">切換至簡潔名單 / Compact List</span>
+                        </button>
+                        
+                        <!-- 批量錄入按鈕 (只有當有學生時才可以使用) -->
+                        <button onclick="toggleBatchMode()" id="btn-batch-mode" class="px-4 py-2 bg-indigo-550 border border-slate-200 bg-white text-indigo-700 hover:bg-slate-50 text-xs font-bold rounded-xl transition duration-200 flex items-center justify-center space-x-1.5 shadow-sm">
+                            <i data-lucide="check-square" class="w-4 h-4"></i>
+                            <span id="btn-batch-mode-text">開啟批量模式 / Batch Mode</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 學生名單顯示網格 -->
+                <div id="student-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- 動態渲染學生卡片 -->
+                </div>
+                
+                <!-- 無學生提示 -->
+                <div id="no-students-view" class="hidden bg-slate-100/50 rounded-2xl py-16 px-4 text-center border border-dashed border-slate-300">
+                    <i data-lucide="user-plus" class="w-12 h-12 text-slate-400 mx-auto mb-3"></i>
+                    <p class="text-slate-600 font-medium">此班別暫無學生名單，請先前往系統設置。</p>
+                    <p class="text-xs text-slate-400 mt-1">No students in this class. Please go to System Settings.</p>
+                    <button onclick="switchTab('settings')" class="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl transition duration-200 shadow-md shadow-indigo-200">
+                        前往設置 / Go to Settings
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 2: SETTINGS 系統設置 ================= -->
+        <section id="view-settings" class="hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- 左側：班級管理 / Class Management -->
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 lg:col-span-1 space-y-4">
+                    <div class="border-b border-slate-100 pb-3">
+                        <h3 class="text-base font-bold text-slate-800 flex items-center space-x-2">
+                            <i data-lucide="folder-cog" class="w-5 h-5 text-indigo-600"></i>
+                            <span>班級設置 / Classes</span>
+                        </h3>
+                    </div>
+                    
+                    <!-- 新增班級 -->
+                    <div class="space-y-2">
+                        <label class="block text-xs font-semibold text-slate-500">新增班別名稱 / New Class Name</label>
+                        <div class="flex space-x-2">
+                            <input type="text" id="new-class-input" placeholder="e.g. 1A, 3B" class="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <button onclick="addClass()" class="px-3.5 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition duration-200">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 班級列表 -->
+                    <div>
+                        <span class="block text-xs font-semibold text-slate-500 mb-2">現有班級 / Active Classes</span>
+                        <div id="settings-class-list" class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                            <!-- 動態生成班級清單 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 中間：學生名單錄入 / Student Management -->
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 lg:col-span-2 space-y-4">
+                    <div class="border-b border-slate-100 pb-3 flex justify-between items-center">
+                        <h3 class="text-base font-bold text-slate-800 flex items-center space-x-2">
+                            <i data-lucide="users" class="w-5 h-5 text-indigo-600"></i>
+                            <span>學生名單管理 / Student Roster</span>
+                        </h3>
+                        <span id="editing-class-badge" class="px-2.5 py-0.5 bg-indigo-50 text-indigo-700 rounded-full text-xs font-semibold border border-indigo-100">
+                            未選擇班別
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- 快速新增單一學生 -->
+                        <div class="bg-slate-50 rounded-xl p-3.5 space-y-3">
+                            <h4 class="text-xs font-bold text-slate-600">新增個別學生 / Add Student</h4>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div class="col-span-1">
+                                    <input type="number" id="new-student-no" placeholder="班號 No." min="1" class="w-full px-2 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                                <div class="col-span-2">
+                                    <input type="text" id="new-student-name" placeholder="學生姓名 Name" class="w-full px-2 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                            </div>
+                            <button onclick="addSingleStudent()" class="w-full py-2 bg-slate-800 text-white rounded-xl text-xs font-semibold hover:bg-slate-900 transition duration-200 flex items-center justify-center space-x-1">
+                                <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+                                <span>確認新增 / Confirm Add</span>
+                            </button>
+                        </div>
+
+                        <!-- 批量貼上匯入 -->
+                        <div class="bg-slate-50 rounded-xl p-3.5 space-y-2">
+                            <div class="flex justify-between items-center">
+                                <h4 class="text-xs font-bold text-slate-600">批量貼上名單 / Batch Import</h4>
+                                <span class="text-[10px] text-slate-400">格式： 班號 姓名 (一行一個)</span>
+                            </div>
+                            <textarea id="batch-student-input" rows="3" placeholder="1 陳大文&#10;2 張小明&#10;3 Chan Tai Man" class="w-full px-2 py-1.5 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                            <button onclick="importBatchStudents()" class="w-full py-1.5 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-xl text-xs font-semibold transition duration-200">
+                                批量匯入 / Import List
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 該班學生列表 -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="block text-xs font-semibold text-slate-500">已錄入學生 / Saved Roster</span>
+                            <button onclick="clearClassStudents()" class="text-xs text-rose-500 hover:text-rose-600 font-medium flex items-center space-x-0.5">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                <span>清空此班名單 / Clear List</span>
+                            </button>
+                        </div>
+                        <div id="settings-student-table-container" class="border border-slate-100 rounded-xl overflow-hidden max-h-64 overflow-y-auto">
+                            <table class="w-full text-left text-xs sm:text-sm">
+                                <thead class="bg-slate-100 sticky top-0 z-10">
+                                    <tr>
+                                        <th class="p-2.5 font-semibold text-slate-600 w-20">班號 / No.</th>
+                                        <th class="p-2.5 font-semibold text-slate-600">姓名 / Name</th>
+                                        <th class="p-2.5 font-semibold text-slate-600 text-right w-16">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="settings-student-list" class="divide-y divide-slate-100 bg-white">
+                                    <!-- 動態加載班級學生 -->
+                                    <tr>
+                                        <td colspan="3" class="p-6 text-center text-slate-400 text-xs">請先於左側選擇/新增班級以管理學生</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 底部/右側：行為類別設置 & 系統備份 -->
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- 行為類別設置 / Behavior Categories -->
+                    <div class="space-y-4">
+                        <div class="border-b border-slate-100 pb-3">
+                            <h3 class="text-base font-bold text-slate-800 flex items-center space-x-2">
+                                <i data-lucide="alert-triangle" class="w-5 h-5 text-indigo-600"></i>
+                                <span>不當行為類別 / Misbehavior Types</span>
+                            </h3>
+                        </div>
+                        
+                        <!-- 新增類別 -->
+                        <div class="space-y-2">
+                            <label class="block text-xs font-semibold text-slate-500">新增行為 (中文及/或英文) / Add Custom Behavior (ZH and/or EN)</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <input type="text" id="new-beh-zh" placeholder="中文名稱 e.g. 欠交功課" class="px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <input type="text" id="new-beh-en" placeholder="English e.g. Homework Missing" class="px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <button onclick="addBehaviorCategory()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition duration-200 flex items-center justify-center space-x-1">
+                                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                                <span>新增類別 / Add Category</span>
+                            </button>
+                        </div>
+
+                        <!-- 類別清單 -->
+                        <div class="space-y-1.5" id="behavior-category-list">
+                            <!-- 動態生成類別清單 -->
+                        </div>
+                    </div>
+
+                    <!-- 資料備份、雲端同步與系統選項 -->
+                    <div class="space-y-4 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                        <!-- 跟進門檻設定 -->
+                        <div class="border-b border-slate-100 pb-2">
+                            <h3 class="text-sm font-bold text-slate-700 flex items-center space-x-2">
+                                <i data-lucide="sliders" class="w-4 h-4 text-indigo-600"></i>
+                                <span>跟進臨界值設定 / Follow-up Threshold</span>
+                            </h3>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-xs font-semibold text-slate-500">累積「每」多少次不當行為需要作跟進 / Multiples of N</label>
+                            <div class="flex space-x-2">
+                                <input type="number" id="follow-up-threshold-input" min="1" value="4" onchange="updateFollowUpThreshold()" class="w-24 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <span class="text-xs text-slate-400 self-center">次 / Times (預設: 4)</span>
+                            </div>
+                        </div>
+
+                        <!-- 雲端跨裝置即時同步設定 -->
+                        <div class="border-b border-slate-100 pb-2 pt-2">
+                            <h3 class="text-sm font-bold text-slate-700 flex items-center space-x-2">
+                                <i data-lucide="cloud-lightning" class="w-4 h-4 text-sky-600 animate-pulse"></i>
+                                <span>電腦與手機即時同步 / Multi-Device Cloud Sync</span>
+                            </h3>
+                        </div>
+                        <div class="space-y-2">
+                            <p class="text-xs text-slate-500 leading-relaxed">
+                                設定一個專屬的「同步密碼」，並在您的手機或電腦瀏覽器輸入相同密碼，即可雙向即時雲端同步所有記錄與設置！
+                            </p>
+                            <div class="flex flex-col sm:flex-row gap-2">
+                                <input type="text" id="cloud-sync-code-input" placeholder="自訂同步密碼 (如: sirmark-123)" class="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-sky-500">
+                                <button onclick="setupCloudSync()" id="btn-cloud-sync" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl transition duration-200 flex items-center justify-center space-x-1.5 shadow-sm">
+                                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                                    <span id="btn-cloud-sync-text">啟用雲端同步</span>
+                                </button>
+                            </div>
+                            <div id="cloud-sync-status" class="text-[11px] text-slate-400 flex items-center space-x-1">
+                                <span class="w-2 h-2 rounded-full bg-slate-300"></span>
+                                <span>目前狀態：單機模式 / Local Database Only</span>
+                            </div>
+                        </div>
+
+                        <div class="border-b border-slate-100 pb-2 pt-2">
+                            <h3 class="text-sm font-bold text-slate-700 flex items-center space-x-2">
+                                <i data-lucide="database" class="w-4 h-4 text-slate-600"></i>
+                                <span>手動資料備份 / Local Backup File</span>
+                            </h3>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3 pt-1">
+                            <button onclick="exportData()" class="px-3 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold transition duration-200 flex items-center justify-center space-x-1.5 shadow-sm">
+                                <i data-lucide="download" class="w-4 h-4 text-emerald-600"></i>
+                                <span>匯出資料 / Export</span>
+                            </button>
+                            <label class="px-3 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold transition duration-200 flex items-center justify-center space-x-1.5 shadow-sm cursor-pointer text-center">
+                                <i data-lucide="upload" class="w-4 h-4 text-indigo-600"></i>
+                                <span>匯入資料 / Import</span>
+                                <input type="file" id="import-file-input" onchange="importData(event)" class="hidden" accept=".json">
+                            </label>
+                        </div>
+
+                        <div class="pt-4 border-t border-slate-100">
+                            <button onclick="confirmResetSystem()" class="w-full py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 rounded-xl text-xs font-semibold transition duration-200 flex items-center justify-center space-x-1">
+                                <i data-lucide="refresh-ccw" class="w-3.5 h-3.5"></i>
+                                <span>初始化整個系統 / Reset System Data</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ================= MODALS & POPUPS / 彈出視窗 ================= -->
+    
+    <!-- 1. 批量記錄懸浮控制列 / Batch Record Floating Control Bar -->
+    <div id="batch-control-bar" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[95%] max-w-4xl bg-slate-900 text-white rounded-2xl shadow-2xl border border-slate-700/80 p-4 transition-all duration-300">
+        <div class="flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
+            <!-- 選擇與設定區域 -->
+            <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center flex-1">
+                <div class="bg-indigo-600 px-3 py-1.5 rounded-xl border border-indigo-500 flex items-center justify-between sm:justify-start space-x-2 shrink-0">
+                    <span class="text-xs font-semibold text-indigo-100">已選擇 / Selected:</span>
+                    <span id="batch-selected-count" class="text-sm font-extrabold text-yellow-300">0</span>
+                    <span class="text-xs font-semibold text-indigo-100">人 / Students</span>
+                </div>
+                
+                <!-- 批量日期 -->
+                <div class="relative shrink-0">
+                    <input type="date" id="batch-record-date" class="w-full bg-slate-850 border border-slate-700 rounded-xl px-3 py-1.5 pl-9 text-xs focus:ring-2 focus:ring-indigo-500 text-white bg-slate-800">
+                    <div class="absolute left-2.5 top-2.5 text-slate-400">
+                        <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                    </div>
+                </div>
+
+                <!-- 批量行為類別選擇 -->
+                <div class="flex-1 min-w-[150px]">
+                    <select id="batch-behavior-select" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:ring-2 focus:ring-indigo-500">
+                        <!-- 動態載入行為選項 -->
+                    </select>
+                </div>
+
+                <!-- 批量備註 -->
+                <div class="flex-1 min-w-[150px]">
+                    <input type="text" id="batch-remarks" placeholder="補充說明 (選填) / Remarks" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+
+            <!-- 批量操作動作 -->
+            <div class="flex space-x-2 shrink-0">
+                <button onclick="toggleBatchMode(false)" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition duration-200">
+                    取消 / Cancel
+                </button>
+                <button onclick="saveBatchRecords()" class="flex-1 md:flex-none px-5 py-2 bg-indigo-600 hover:bg-indigo-550 text-white rounded-xl text-xs font-bold transition duration-200 shadow-lg shadow-indigo-900/40 flex items-center justify-center space-x-1.5">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    <span>儲存批量 / Save Batch</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. 新增不當行為事件彈出框 (Single Record Modal) -->
+    <div id="add-record-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-slate-100 overflow-hidden transform transition-all scale-95 duration-200">
+            <!-- 標頭 -->
+            <div class="bg-indigo-700 text-white p-4 flex justify-between items-center">
+                <div>
+                    <h3 class="font-bold text-base flex items-center space-x-2">
+                        <i data-lucide="alert-circle" class="w-5 h-5 text-yellow-300 animate-bounce"></i>
+                        <span>新增行為記錄 / Add Record</span>
+                    </h3>
+                    <p id="modal-student-info" class="text-xs text-indigo-200 mt-0.5">學生: Class No Name</p>
+                </div>
+                <button onclick="closeRecordModal()" class="text-white hover:text-slate-200 p-1 rounded-lg">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <!-- 內容 -->
+            <div class="p-5 space-y-4">
+                <input type="hidden" id="modal-student-uid">
+                
+                <!-- 日期選擇 -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">記錄日期 / Date</label>
+                    <div class="relative">
+                        <input type="date" id="record-date" class="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <div class="absolute left-3 top-2.5 text-slate-400">
+                            <i data-lucide="calendar" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 行為選擇 -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">不當行為類別 / Misbehavior Category</label>
+                    <div id="modal-behavior-buttons" class="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto pr-1">
+                        <!-- 動態行為按鈕 -->
+                    </div>
+                    <input type="hidden" id="selected-behavior-key">
+                </div>
+
+                <!-- 備註 -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">補充說明 (選填) / Remarks (Optional)</label>
+                    <textarea id="record-remarks" placeholder="例如：漏帶英文作業 / Missing homework" rows="2" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                </div>
+            </div>
+
+            <!-- 按鈕 -->
+            <div class="bg-slate-50 p-4 border-t border-slate-100 flex space-x-3">
+                <button onclick="closeRecordModal()" class="flex-1 py-2.5 bg-white border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-semibold text-slate-600 transition duration-200">
+                    取消 / Cancel
+                </button>
+                <button onclick="saveMisbehaviorRecord()" class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition duration-200 shadow-md">
+                    儲存記錄 / Save Record
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 行為歷程詳情彈出框 (History Details Modal) -->
+    <div id="history-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl border border-slate-100 overflow-hidden transform transition-all duration-200">
+            <!-- 標頭 -->
+            <div class="bg-slate-800 text-white p-4 flex justify-between items-center">
+                <div>
+                    <h3 class="font-bold text-base flex items-center space-x-2">
+                        <i data-lucide="history" class="w-5 h-5 text-slate-300"></i>
+                        <span>個人行為記錄歷程 / History Logs</span>
+                    </h3>
+                    <p id="history-student-info" class="text-xs text-slate-400 mt-0.5">學生資料</p>
+                </div>
+                <button onclick="closeHistoryModal()" class="text-white hover:text-slate-200 p-1 rounded-lg">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- 內容 -->
+            <div class="p-5 space-y-4">
+                <div class="bg-slate-50 rounded-xl p-3 flex justify-between items-center border border-slate-100">
+                    <div>
+                        <span class="text-xs text-slate-500">累計記錄次數 / Total Records</span>
+                        <div class="flex items-baseline space-x-1 mt-0.5">
+                            <span id="history-total-count" class="text-2xl font-bold text-indigo-600">0</span>
+                            <span class="text-xs text-slate-400">次 / Times</span>
+                        </div>
+                    </div>
+                    
+                    <div id="history-status-action-area" class="flex flex-col items-end space-y-1">
+                        <!-- 動態狀態 -->
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <span class="block text-xs font-semibold text-slate-500">詳細記錄清單 / Detailed Records</span>
+                    <div id="history-list" class="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+                        <!-- 動態歷史 -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 p-4 border-t border-slate-100 flex justify-end">
+                <button onclick="closeHistoryModal()" class="px-5 py-2 bg-slate-800 text-white text-xs font-semibold rounded-xl hover:bg-slate-900 transition duration-200">
+                    關閉 / Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. 自訂通知彈出框 (Custom Alert Box) -->
+    <div id="custom-alert" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl border border-slate-100 overflow-hidden transform transition-all duration-200 p-6 space-y-4 text-center">
+            <div id="alert-icon-container" class="mx-auto w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center border border-amber-100 text-amber-500">
+                <i data-lucide="alert-triangle" class="w-10 h-10 animate-bounce"></i>
+            </div>
+            <div>
+                <h3 id="alert-title" class="text-lg font-bold text-slate-800">重要通知</h3>
+                <p id="alert-subtitle" class="text-xs text-slate-400 mt-0.5">Notice</p>
+            </div>
+            <p id="alert-message" class="text-sm text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">
+                訊息內容將在此處顯示。
+            </p>
+            <div class="flex space-x-3 pt-2">
+                <button onclick="closeCustomAlert()" class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition duration-200 shadow-md shadow-indigo-200">
+                    知道了 / Understood
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. 確認視窗 (Custom Confirm Modal) -->
+    <div id="custom-confirm" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl border border-slate-100 overflow-hidden transform transition-all duration-200 p-6 space-y-4 text-center">
+            <div class="mx-auto w-14 h-14 bg-rose-50 rounded-full flex items-center justify-center border border-rose-100 text-rose-500">
+                <i data-lucide="help-circle" class="w-8 h-8"></i>
+            </div>
+            <div>
+                <h3 id="confirm-title" class="text-base font-bold text-slate-800">您確定嗎？</h3>
+                <p id="confirm-subtitle" class="text-xs text-slate-400 mt-0.5">Are you sure?</p>
+            </div>
+            <p id="confirm-message" class="text-xs sm:text-sm text-slate-600">
+                此操作將無法撤銷。
+            </p>
+            <div class="flex space-x-3 pt-2">
+                <button onclick="closeConfirm(false)" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition duration-200">
+                    取消 / Cancel
+                </button>
+                <button id="confirm-yes-btn" class="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-xl transition duration-200 shadow-md">
+                    確定 / Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase CDN 載入 (用於雲端同步) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // 雲端 Firebase 同步模組狀態
+        let firebaseApp = null;
+        let firestoreDb = null;
+        let firebaseAuth = null;
+        let cloudSyncUnsubscribe = null;
+        let activeSyncCode = "";
+
+        // === 2. 雲端 Firebase 同步核心邏輯 ===
+        window.setupCloudSync = async function() {
+            const syncInput = document.getElementById('cloud-sync-code-input');
+            const code = syncInput.value.trim().toLowerCase();
+            const btnText = document.getElementById('btn-cloud-sync-text');
+            const statusDiv = document.getElementById('cloud-sync-status');
+
+            if (!code) {
+                showCustomAlert("輸入錯誤", "Sync Code Empty", "請填入您的自訂同步密碼 / Please input a Sync Code", "error");
+                return;
+            }
+
+            // 環境提供的變數
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'student-tracker-fallback';
+            const firebaseConfigRaw = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
+
+            if (!firebaseConfigRaw) {
+                showCustomAlert("無法建立連線", "Firebase Config Missing", "目前的執行環境尚未配備雲端資料庫設置，無法啟用此功能。", "error");
+                return;
+            }
+
+            try {
+                btnText.textContent = "連線中 / Connecting...";
+                
+                // 1. 初始化 Firebase
+                if (!firebaseApp) {
+                    const config = JSON.parse(firebaseConfigRaw);
+                    firebaseApp = initializeApp(config);
+                    firestoreDb = getFirestore(firebaseApp);
+                    firebaseAuth = getAuth(firebaseApp);
+                }
+
+                // 2. 匿名登入 (符合 RULE 3)
+                await signInAnonymously(firebaseAuth);
+
+                // 3. 建立即時同步監聽
+                if (cloudSyncUnsubscribe) {
+                    cloudSyncUnsubscribe();
+                }
+
+                activeSyncCode = code;
+
+                // 採用 RULE 1 指定路徑
+                const docRef = doc(firestoreDb, 'artifacts', appId, 'public', 'data', 'syncConfigs', activeSyncCode);
+
+                cloudSyncUnsubscribe = onSnapshot(docRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        const cloudData = docSnap.data();
+                        // 合併雲端數據
+                        if (cloudData && cloudData.state) {
+                            window.appState = cloudData.state;
+                            // 儲存至本機
+                            localStorage.setItem('student_behavior_tracker_data', JSON.stringify(window.appState));
+                            if (typeof renderAll === 'function') {
+                                renderAll();
+                            }
+                        }
+                    } else {
+                        // 如果雲端尚無此密碼的數據，將本機目前數據推送到雲端
+                        saveToCloud();
+                    }
+                }, (error) => {
+                    console.error("Firestore sync error:", error);
+                    statusDiv.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span><span class="text-rose-600">同步錯誤 / Sync Error: ${error.message}</span>`;
+                });
+
+                // 連線成功狀態顯示
+                statusDiv.innerHTML = `
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+                    <span class="text-emerald-600 font-bold">雲端同步中 / Syncing Active (密碼: ${activeSyncCode})</span>
+                `;
+                btnText.textContent = "已連線 / Synced";
+                showCustomAlert("雲端連線成功", "Cloud Connected", "兩部裝置輸入相同密碼，即可即時相互同步數據！", "success");
+                
+                // 儲存密碼到本機便於重整後自動連線
+                localStorage.setItem('saved_sync_code', activeSyncCode);
+
+            } catch (err) {
+                console.error("Firebase init failed:", err);
+                btnText.textContent = "啟用雲端同步";
+                showCustomAlert("連線失敗", "Connection Failed", err.message, "error");
+            }
+        }
+
+        async function saveToCloud() {
+            if (!firestoreDb || !activeSyncCode) return;
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'student-tracker-fallback';
+            const docRef = doc(firestoreDb, 'artifacts', appId, 'public', 'data', 'syncConfigs', activeSyncCode);
+            try {
+                // 將全域 appState 直接打包上傳
+                await setDoc(docRef, {
+                    state: window.appState,
+                    lastUpdated: Date.now()
+                });
+            } catch (e) {
+                console.error("Cloud upload failed", e);
+            }
+        }
+
+        window.saveToCloud = saveToCloud;
+
+        // 自動嘗試重啟雲端同步
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedCode = localStorage.getItem('saved_sync_code');
+            if (savedCode) {
+                const cloudSyncCodeInput = document.getElementById('cloud-sync-code-input');
+                if (cloudSyncCodeInput) {
+                    cloudSyncCodeInput.value = savedCode;
+                }
+                setTimeout(() => {
+                    setupCloudSync();
+                }, 800);
+            }
+        });
+    </script>
+
+    <!-- 主體邏輯 script -->
+    <script>
+        // === 全局狀態設定 ===
+        window.appState = {
+            classes: [], 
+            students: {}, 
+            behaviors: [
+                { key: 'missing_textbook', zh: '欠帶課本', en: 'Textbook Missing' },
+                { key: 'unprepared', zh: '欠備課', en: 'Unprepared for Class' },
+                { key: 'reading_inattentive', zh: 'Reading time 沒有專心閱讀', en: 'Inattentive during Reading Time' },
+                { key: 'missing_handbook_writeup', zh: '欠寫手冊', en: 'Handbook Unwritten' },
+                { key: 'missing_parent_signature', zh: '欠家長簽名', en: 'Parent Signature Missing' },
+                { key: 'missing_handbook', zh: '欠帶手冊', en: 'Handbook Missing' },
+                { key: 'inattentive_in_class', zh: '上課不專心', en: 'Inattentive in Class' },
+                { key: 'poor_attitude', zh: '學習態度不認真', en: 'Poor Learning Attitude' }
+            ],
+            records: [], 
+            followUpsHandled: {}, 
+            followUpThreshold: 4 
+        };
+
+        // 界面狀態變數
+        window.isBatchModeActive = false;
+        window.isCompactViewActive = false; // 是否在批量錄入時使用精簡名單模式
+        window.selectedStudentUidsForBatch = [];
+        window.currentActiveTab = 'tracker';
+        window.currentSelectedClass = ''; 
+        window.currentEditingClass = ''; 
+        window.confirmCallback = null;
+
+        // === 1. 初始化讀取與儲存 ===
+        window.saveToLocalStorage = function() {
+            localStorage.setItem('student_behavior_tracker_data', JSON.stringify(window.appState));
+            // 如果雲端同步處於開啟狀態，同時寫入雲端
+            if (typeof window.saveToCloud === 'function') {
+                window.saveToCloud();
+            }
+        }
+
+        window.loadFromLocalStorage = function() {
+            const data = localStorage.getItem('student_behavior_tracker_data');
+            if (data) {
+                try {
+                    const parsed = JSON.parse(data);
+                    window.appState = {
+                        classes: parsed.classes || [],
+                        students: parsed.students || {},
+                        behaviors: parsed.behaviors || window.appState.behaviors,
+                        records: parsed.records || [],
+                        followUpsHandled: parsed.followUpsHandled || {},
+                        followUpThreshold: parsed.followUpThreshold || 4
+                    };
+                } catch (e) {
+                    console.error("Error loading localStorage", e);
+                }
+            }
+        }
+
+        // === 3. 畫面重繪與切換 ===
+        function renderAll() {
+            renderClassSelectors();
+            renderStats();
+            renderStudentGrid();
+            renderSettingsClasses();
+            renderSettingsStudents();
+            renderBehaviorCategories();
+            populateBatchBehaviorDropdown(); 
+            
+            const thresholdInput = document.getElementById('follow-up-threshold-input');
+            if (thresholdInput) {
+                thresholdInput.value = window.appState.followUpThreshold || 4;
+            }
+            
+            lucide.createIcons();
+        }
+
+        // === 4. 導航切換 ===
+        function switchTab(tabId) {
+            if (window.isBatchModeActive) {
+                toggleBatchMode(false);
+            }
+
+            window.currentActiveTab = tabId;
+            
+            const btnTracker = document.getElementById('tab-tracker');
+            const btnSettings = document.getElementById('tab-settings');
+            const viewTracker = document.getElementById('view-tracker');
+            const viewSettings = document.getElementById('view-settings');
+
+            if (tabId === 'tracker') {
+                btnTracker.className = "px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition duration-200 bg-white text-indigo-900 shadow";
+                btnSettings.className = "px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition duration-200 text-indigo-100 hover:bg-indigo-600/50";
+                viewTracker.classList.remove('hidden');
+                viewSettings.classList.add('hidden');
+                renderAll();
+            } else {
+                btnSettings.className = "px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition duration-200 bg-white text-indigo-900 shadow";
+                btnTracker.className = "px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition duration-200 text-indigo-100 hover:bg-indigo-600/50";
+                viewSettings.classList.remove('hidden');
+                viewTracker.classList.add('hidden');
+                renderAll();
+            }
+        }
+
+        // === 5. 班級選擇器更新 ===
+        function renderClassSelectors() {
+            const trackerSelect = document.getElementById('tracker-class-select');
+            const previousSelected = window.currentSelectedClass;
+            trackerSelect.innerHTML = '';
+            
+            if (window.appState.classes.length === 0) {
+                trackerSelect.innerHTML = `<option value="">-- 暫無班別 / No Classes --</option>`;
+                window.currentSelectedClass = '';
+                document.getElementById('batch-toggle-container').classList.add('hidden');
+                return;
+            }
+
+            window.appState.classes.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = `${c.name} 班`;
+                trackerSelect.appendChild(opt);
+            });
+
+            if (window.appState.classes.some(c => c.id === previousSelected)) {
+                window.currentSelectedClass = previousSelected;
+            } else {
+                window.currentSelectedClass = window.appState.classes[0].id;
+            }
+            trackerSelect.value = window.currentSelectedClass;
+            
+            const classStudents = window.appState.students[window.currentSelectedClass] || [];
+            if (classStudents.length > 0) {
+                document.getElementById('batch-toggle-container').classList.remove('hidden');
+            } else {
+                document.getElementById('batch-toggle-container').classList.add('hidden');
+            }
+        }
+
+        function loadClassStudents() {
+            const trackerSelect = document.getElementById('tracker-class-select');
+            window.currentSelectedClass = trackerSelect.value;
+            
+            if (window.isBatchModeActive) {
+                toggleBatchMode(false);
+            }
+            
+            renderStats();
+            renderStudentGrid();
+            
+            const classStudents = window.appState.students[window.currentSelectedClass] || [];
+            if (classStudents.length > 0) {
+                document.getElementById('batch-toggle-container').classList.remove('hidden');
+            } else {
+                document.getElementById('batch-toggle-container').classList.add('hidden');
+            }
+        }
+
+        // === 6. 統計數據更新 ===
+        function renderStats() {
+            const totalEl = document.getElementById('stat-total-students');
+            const alertEl = document.getElementById('stat-follow-up');
+            const todayEl = document.getElementById('stat-today-records');
+
+            if (!window.currentSelectedClass) {
+                totalEl.textContent = '0';
+                alertEl.textContent = '0';
+                todayEl.textContent = '0';
+                return;
+            }
+
+            const classStudents = window.appState.students[window.currentSelectedClass] || [];
+            totalEl.textContent = classStudents.length;
+
+            let alertCount = 0;
+            classStudents.forEach(student => {
+                if (checkStudentNeedsFollowUp(student.uid)) {
+                    alertCount++;
+                }
+            });
+            alertEl.textContent = alertCount;
+
+            const todayStr = getTodayDateString();
+            const todayRecords = window.appState.records.filter(r => r.classId === window.currentSelectedClass && r.date === todayStr);
+            todayEl.textContent = todayRecords.length;
+        }
+
+        // === 7. 學生名單與「簡潔名單模式」渲染 ===
+        function renderStudentGrid() {
+            const grid = document.getElementById('student-grid');
+            const noView = document.getElementById('no-students-view');
+            
+            grid.innerHTML = '';
+
+            if (!window.currentSelectedClass || !window.appState.students[window.currentSelectedClass] || window.appState.students[window.currentSelectedClass].length === 0) {
+                grid.classList.add('hidden');
+                noView.classList.remove('hidden');
+                return;
+            }
+
+            grid.classList.remove('hidden');
+            noView.classList.add('hidden');
+
+            const sortedStudents = [...window.appState.students[window.currentSelectedClass]].sort((a, b) => Number(a.id) - Number(b.id));
+
+            // 如果是在「批量錄入」且啟用「簡潔名單模式」下：
+            if (window.isBatchModeActive && window.isCompactViewActive) {
+                // 將網格樣式修改為更細密的多列佈局
+                grid.className = "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2";
+                
+                sortedStudents.forEach(student => {
+                    const isSelectedInBatch = window.selectedStudentUidsForBatch.includes(student.uid);
+                    const isNeedFollowUp = checkStudentNeedsFollowUp(student.uid);
+                    const totalViolations = getStudentRecords(student.uid).length;
+
+                    const item = document.createElement('div');
+                    item.className = `flex items-center justify-between p-2.5 rounded-xl border cursor-pointer select-none transition-all duration-150 text-xs sm:text-sm ${
+                        isSelectedInBatch 
+                            ? 'bg-indigo-600 border-indigo-600 text-white font-bold shadow-sm shadow-indigo-200' 
+                            : (isNeedFollowUp 
+                                ? 'bg-rose-50 border-rose-200 text-rose-800' 
+                                : 'bg-white border-slate-200 hover:border-slate-300 text-slate-800')
+                    }`;
+                    item.onclick = () => toggleStudentSelectionForBatch(student.uid);
+
+                    item.innerHTML = `
+                        <div class="flex items-center space-x-1.5 truncate">
+                            <span class="flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${
+                                isSelectedInBatch ? 'bg-white text-indigo-700' : 'bg-indigo-50 text-indigo-700'
+                            }">${student.id}</span>
+                            <span class="truncate">${student.name}</span>
+                        </div>
+                        <div class="flex items-center space-x-1 shrink-0 ml-1">
+                            ${isNeedFollowUp ? `<span class="w-1.5 h-1.5 rounded-full bg-rose-500 ${isSelectedInBatch ? 'hidden' : 'animate-ping'}"></span>` : ''}
+                            <span class="text-[9px] px-1 bg-slate-100/50 rounded font-normal ${isSelectedInBatch ? 'text-indigo-200' : 'text-slate-400'}">
+                                ${totalViolations}次
+                            </span>
+                        </div>
+                    `;
+                    grid.appendChild(item);
+                });
+                return;
+            }
+
+            // 一般網格樣式與標準批量樣式 (標準卡片模式)
+            grid.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4";
+
+            sortedStudents.forEach(student => {
+                const totalViolations = getStudentRecords(student.uid).length;
+                const isNeedFollowUp = checkStudentNeedsFollowUp(student.uid);
+                const isSelectedInBatch = window.selectedStudentUidsForBatch.includes(student.uid);
+                
+                const card = document.createElement('div');
+                
+                if (window.isBatchModeActive) {
+                    card.className = `relative overflow-hidden rounded-2xl border cursor-pointer transition-all duration-200 p-4 ${
+                        isSelectedInBatch 
+                            ? 'bg-indigo-50/90 border-indigo-600 ring-2 ring-indigo-500/20 shadow-md scale-[1.01]' 
+                            : 'bg-white border-slate-200 hover:border-indigo-300 shadow-sm hover:shadow-md'
+                    }`;
+                    card.onclick = () => toggleStudentSelectionForBatch(student.uid);
+                } else {
+                    card.className = `relative overflow-hidden rounded-2xl border transition duration-300 p-4 ${
+                        isNeedFollowUp 
+                            ? 'bg-rose-50/70 border-rose-200 shadow-md shadow-rose-100 hover:shadow-lg animate-pulse' 
+                            : 'bg-white border-slate-100 hover:border-indigo-300 shadow-sm hover:shadow-md'
+                    }`;
+                }
+
+                let statusBadgeHtml = '';
+                if (window.isBatchModeActive) {
+                    statusBadgeHtml = `
+                        <div class="flex items-center justify-center w-5 h-5 rounded-md border ${
+                            isSelectedInBatch 
+                                ? 'bg-indigo-600 border-indigo-600 text-white' 
+                                : 'border-slate-300 text-transparent'
+                        }">
+                            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                        </div>
+                    `;
+                } else {
+                    if (isNeedFollowUp) {
+                        statusBadgeHtml = `
+                            <span class="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-xs font-bold bg-rose-500 text-white animate-pulse">
+                                <i data-lucide="alert-triangle" class="w-3 h-3"></i>
+                                <span>需跟進 / FOLLOW UP</span>
+                            </span>
+                        `;
+                    } else if (totalViolations > 0) {
+                        statusBadgeHtml = `
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
+                                已記錄 / Monitored
+                            </span>
+                        `;
+                    } else {
+                        statusBadgeHtml = `
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-600 border border-emerald-100">
+                                表現良好 / Clear
+                            </span>
+                        `;
+                    }
+                }
+
+                let cardFooterHtml = '';
+                if (window.isBatchModeActive) {
+                    cardFooterHtml = `
+                        <div class="mt-4 text-center text-xs font-semibold ${isSelectedInBatch ? 'text-indigo-600' : 'text-slate-400'} py-2 bg-slate-50 rounded-xl border border-dashed border-slate-100">
+                            ${isSelectedInBatch ? '已選取 / Selected' : '點擊以複選 / Click to Select'}
+                        </div>
+                    `;
+                } else {
+                    cardFooterHtml = `
+                        <div class="mt-4 flex space-x-2">
+                            <button onclick="openRecordModal('${student.uid}', event)" class="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition duration-200 flex items-center justify-center space-x-1 shadow-sm">
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                <span>新增 / Record</span>
+                            </button>
+                            <button onclick="openHistoryModal('${student.uid}', event)" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold transition duration-200 flex items-center justify-center">
+                                <i data-lucide="history" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div class="flex items-center space-x-2">
+                            <span class="flex items-center justify-center w-7 h-7 bg-indigo-50 text-indigo-700 rounded-full font-bold text-xs">
+                                ${student.id}
+                            </span>
+                            <h4 class="text-base font-bold text-slate-800">${student.name}</h4>
+                        </div>
+                        ${statusBadgeHtml}
+                    </div>
+
+                    <div class="mt-4 flex justify-between items-center bg-slate-50/50 p-2.5 rounded-xl border border-slate-100/50">
+                        <div>
+                            <span class="text-xs text-slate-400 block">累計不當行為 / Total Records</span>
+                            <span class="text-lg font-extrabold ${totalViolations > 0 ? 'text-indigo-600' : 'text-slate-400'}">
+                                ${totalViolations} 次 / Times
+                            </span>
+                        </div>
+                        
+                        ${(isNeedFollowUp && !window.isBatchModeActive) ? `
+                            <button onclick="handleManualFollowUp('${student.uid}', event)" class="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition duration-200 flex items-center space-x-1 shadow-sm">
+                                <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                                <span>解除狀態 / Clear</span>
+                            </button>
+                        ` : ''}
+                    </div>
+
+                    ${cardFooterHtml}
+                `;
+
+                grid.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        // === 8. 新「需跟進」標籤邏輯：除非老師手動解除，否則累計超過臨界值仍會一直留存 ===
+        function checkStudentNeedsFollowUp(studentUid) {
+            const records = getStudentRecords(studentUid);
+            const count = records.length;
+            if (count === 0) return false;
+
+            const threshold = window.appState.followUpThreshold || 4;
+            
+            // 找出小於或等於當前累計次數中，最大的門檻倍數
+            // 比如 4、5、6、7 次不當行為時，最大倍數均是 4； 8、9次時，最大倍數是 8
+            const highestMultiple = Math.floor(count / threshold) * threshold;
+
+            if (highestMultiple === 0) return false;
+
+            const handledList = window.appState.followUpsHandled[studentUid] || [];
+            
+            // 只要這個最大的倍數「沒有」被手動標記為已處理 (Handled)，提示就會「一直留存」
+            if (!handledList.includes(highestMultiple)) {
+                return true; 
+            }
+            return false;
+        }
+
+        function getStudentRecords(studentUid) {
+            return window.appState.records.filter(r => r.studentUid === studentUid);
+        }
+
+        // === 9. 批量記錄切換與控制 ===
+        function toggleBatchMode(forceState) {
+            const targetState = (forceState !== undefined) ? forceState : !window.isBatchModeActive;
+            if (targetState === window.isBatchModeActive) return;
+            
+            window.isBatchModeActive = targetState;
+            
+            const btn = document.getElementById('btn-batch-mode');
+            const btnText = document.getElementById('btn-batch-mode-text');
+            const btnCompact = document.getElementById('btn-compact-view');
+            const batchBar = document.getElementById('batch-control-bar');
+            const modeDesc = document.getElementById('tracker-mode-desc');
+
+            if (window.isBatchModeActive) {
+                window.selectedStudentUidsForBatch = [];
+                btn.className = "w-full sm:w-auto px-4 py-2.5 bg-indigo-700 border border-indigo-750 text-white hover:bg-indigo-800 text-xs font-bold rounded-xl transition duration-200 flex items-center justify-center space-x-1.5 shadow-md shadow-indigo-200";
+                btnText.textContent = "關閉批量模式 / Close Batch";
+                btnCompact.classList.remove('hidden');
+                batchBar.classList.remove('hidden');
+                
+                document.getElementById('batch-record-date').value = getTodayDateString();
+                document.getElementById('batch-remarks').value = '';
+                document.getElementById('batch-selected-count').textContent = '0';
+                
+                modeDesc.innerHTML = `<span class="text-indigo-600 font-bold animate-pulse">【批量模式已開啟】</span> 請在下方多選需要錄入的學生。可以使用右側按鈕切換簡潔名單！`;
+            } else {
+                window.selectedStudentUidsForBatch = [];
+                btn.className = "w-full sm:w-auto px-4 py-2.5 bg-indigo-550 border border-slate-200 bg-white text-indigo-700 hover:bg-slate-50 text-xs font-bold rounded-xl transition duration-200 flex items-center justify-center space-x-1.5 shadow-sm";
+                btnText.textContent = "開啟批量模式 / Batch Mode";
+                btnCompact.classList.add('hidden');
+                batchBar.classList.add('hidden');
+                
+                modeDesc.textContent = "點擊學生可直接快速新增記錄 / Click card to add record";
+            }
+
+            renderStudentGrid();
+        }
+
+        // 切換簡潔名單模式 (特別適合手機)
+        function toggleCompactView() {
+            window.isCompactViewActive = !window.isCompactViewActive;
+            const btnCompactText = document.getElementById('btn-compact-text');
+            const icon = document.getElementById('btn-compact-view').querySelector('i');
+            
+            if (window.isCompactViewActive) {
+                btnCompactText.textContent = "切換至卡片模式 / Card View";
+            } else {
+                btnCompactText.textContent = "切換至簡潔名單 / Compact List";
+            }
+            renderStudentGrid();
+        }
+
+        function toggleStudentSelectionForBatch(studentUid) {
+            const index = window.selectedStudentUidsForBatch.indexOf(studentUid);
+            if (index > -1) {
+                window.selectedStudentUidsForBatch.splice(index, 1);
+            } else {
+                window.selectedStudentUidsForBatch.push(studentUid);
+            }
+
+            document.getElementById('batch-selected-count').textContent = window.selectedStudentUidsForBatch.length;
+            renderStudentGrid();
+        }
+
+        function populateBatchBehaviorDropdown() {
+            const select = document.getElementById('batch-behavior-select');
+            if (select) {
+                select.innerHTML = '<option value="">-- 選擇不當行為 / Behavior --</option>';
+                window.appState.behaviors.forEach(b => {
+                    const opt = document.createElement('option');
+                    opt.value = b.key;
+                    opt.textContent = `${b.zh} (${b.en})`;
+                    select.appendChild(opt);
+                });
+            }
+        }
+
+        function saveBatchRecords() {
+            if (window.selectedStudentUidsForBatch.length === 0) {
+                showCustomAlert("提示", "No Students Selected", "請先點擊學生以選擇至少一位學生！", "error");
+                return;
+            }
+
+            const date = document.getElementById('batch-record-date').value;
+            const behaviorKey = document.getElementById('batch-behavior-select').value;
+            const remarks = document.getElementById('batch-remarks').value.trim();
+
+            if (!date) {
+                showCustomAlert("輸入錯誤", "Date Missing", "請選擇日期 / Please select a date", "error");
+                return;
+            }
+            if (!behaviorKey) {
+                showCustomAlert("輸入錯誤", "Selection Missing", "請選擇不當行為類別 / Please select a behavior category", "error");
+                return;
+            }
+
+            let followUpTriggeredStudents = [];
+            const threshold = window.appState.followUpThreshold || 4;
+
+            window.selectedStudentUidsForBatch.forEach(studentUid => {
+                const newRecord = {
+                    id: 'rec-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+                    studentUid: studentUid,
+                    classId: window.currentSelectedClass,
+                    date: date,
+                    behaviorKey: behaviorKey,
+                    remarks: remarks
+                };
+                window.appState.records.push(newRecord);
+
+                const updatedRecords = getStudentRecords(studentUid);
+                const totalCount = updatedRecords.length;
+                if (totalCount > 0 && totalCount % threshold === 0) {
+                    const student = findStudentByUid(studentUid);
+                    if (student) {
+                        followUpTriggeredStudents.push({
+                            name: student.name,
+                            id: student.id,
+                            count: totalCount
+                        });
+                    }
+                }
+            });
+
+            saveToLocalStorage();
+            
+            const totalRecorded = window.selectedStudentUidsForBatch.length;
+            toggleBatchMode(false);
+            renderAll();
+
+            if (followUpTriggeredStudents.length > 0) {
+                let studentsListHtml = followUpTriggeredStudents.map(s => 
+                    `<li>• <b>[${s.id}] ${s.name}</b> (已累積達 <b>${s.count} 次</b>)</li>`
+                ).join('');
+
+                showCustomAlert(
+                    "⚠️ 批量新增完成（觸發個案跟進）",
+                    "Batch Complete - Follow-up Required",
+                    `已成功為 <b>${totalRecorded}</b> 名學生新增行為記錄！<br><br><b>以下學生累計不當行為次數已達 ${threshold} 的倍數，請即時進行介入與輔導：</b><ul class="text-left mt-2 space-y-1 bg-rose-50 text-rose-850 p-3 rounded-xl border border-rose-200 text-xs max-h-40 overflow-y-auto">${studentsListHtml}</ul>`,
+                    "alert"
+                );
+            } else {
+                showCustomAlert(
+                    "批量儲存成功", 
+                    "Batch Saved Successfully", 
+                    `已成功為 <b>${totalRecorded}</b> 名學生批量新增行為記錄。`, 
+                    "success"
+                );
+            }
+        }
+
+        // === 10. 手動解除跟進狀態 ===
+        function handleManualFollowUp(studentUid, event) {
+            if (event) event.stopPropagation();
+
+            const student = findStudentByUid(studentUid);
+            const records = getStudentRecords(studentUid);
+            const count = records.length;
+            const threshold = window.appState.followUpThreshold || 4;
+
+            if (!student) return;
+
+            // 解除當前最大的倍數跟進
+            const highestMultiple = Math.floor(count / threshold) * threshold;
+
+            openConfirm(
+                `確定已處理學生的不當行為個案？`,
+                `Confirming follow-up actions for this student?`,
+                `這將為學生 <b>(${student.id}) ${student.name}</b> 解除目前的「需跟進」狀態。當下次再累積至下一個 ${threshold} 次的倍數時（如第 ${highestMultiple + threshold} 次），系統才會再次提醒。`,
+                () => {
+                    if (!window.appState.followUpsHandled[studentUid]) {
+                        window.appState.followUpsHandled[studentUid] = [];
+                    }
+                    if (!window.appState.followUpsHandled[studentUid].includes(highestMultiple)) {
+                        window.appState.followUpsHandled[studentUid].push(highestMultiple);
+                    }
+                    saveToLocalStorage();
+                    renderAll();
+                    showCustomAlert(
+                        "處理成功 / Resolved",
+                        "Success",
+                        `已手動解除 <b>${student.name}</b> 的跟進狀態。`,
+                        "success"
+                    );
+                }
+            );
+        }
+
+        // === 11. 新增單一不當行為記錄 ===
+        function openRecordModal(studentUid, event) {
+            if (event) event.stopPropagation();
+
+            const student = findStudentByUid(studentUid);
+            if (!student) return;
+
+            document.getElementById('modal-student-uid').value = studentUid;
+            document.getElementById('modal-student-info').textContent = `班別/班號/姓名: ${window.currentSelectedClass} - [${student.id}] ${student.name}`;
+            document.getElementById('record-date').value = getTodayDateString();
+            document.getElementById('record-remarks').value = '';
+            document.getElementById('selected-behavior-key').value = '';
+
+            renderModalBehaviorOptions();
+
+            document.getElementById('add-record-modal').classList.remove('hidden');
+        }
+
+        function renderModalBehaviorOptions() {
+            const container = document.getElementById('modal-behavior-buttons');
+            container.innerHTML = '';
+
+            window.appState.behaviors.forEach(b => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = "behavior-opt-btn p-2.5 text-xs text-left font-medium border border-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-300 transition duration-150 flex justify-between items-center";
+                btn.dataset.key = b.key;
+                btn.onclick = () => selectBehaviorInModal(b.key);
+                btn.innerHTML = `
+                    <div>
+                        <span class="block text-slate-800 font-bold">${b.zh}</span>
+                        <span class="block text-slate-500 text-[10px]">${b.en}</span>
+                    </div>
+                    <div class="checkmark-icon opacity-0 text-indigo-600">
+                        <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+                    </div>
+                `;
+                container.appendChild(btn);
+            });
+            lucide.createIcons();
+        }
+
+        function selectBehaviorInModal(behaviorKey) {
+            document.getElementById('selected-behavior-key').value = behaviorKey;
+            
+            const buttons = document.querySelectorAll('.behavior-opt-btn');
+            buttons.forEach(btn => {
+                const icon = btn.querySelector('.checkmark-icon');
+                if (btn.dataset.key === behaviorKey) {
+                    btn.className = "behavior-opt-btn p-2.5 text-xs text-left font-semibold border-2 border-indigo-600 bg-indigo-50/50 rounded-xl transition duration-150 flex justify-between items-center";
+                    icon.classList.remove('opacity-0');
+                    icon.classList.add('opacity-100');
+                } else {
+                    btn.className = "behavior-opt-btn p-2.5 text-xs text-left font-medium border border-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-300 transition duration-150 flex justify-between items-center";
+                    icon.classList.add('opacity-0');
+                    icon.classList.remove('opacity-100');
+                }
+            });
+        }
+
+        // 關閉單筆記錄視窗
+        function closeRecordModal() {
+            document.getElementById('add-record-modal').classList.add('hidden');
+        }
+
+        function saveMisbehaviorRecord() {
+            const studentUid = document.getElementById('modal-student-uid').value;
+            const date = document.getElementById('record-date').value;
+            const behaviorKey = document.getElementById('selected-behavior-key').value;
+            const remarks = document.getElementById('record-remarks').value.trim();
+
+            if (!date) {
+                showCustomAlert("輸入錯誤", "Date Missing", "請選擇日期 / Please select a date", "error");
+                return;
+            }
+            if (!behaviorKey) {
+                showCustomAlert("輸入錯誤", "Selection Missing", "請選擇不當行為類別 / Please select a behavior category", "error");
+                return;
+            }
+
+            const student = findStudentByUid(studentUid);
+            if (!student) return;
+
+            const newRecord = {
+                id: 'rec-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+                studentUid: studentUid,
+                classId: window.currentSelectedClass,
+                date: date,
+                behaviorKey: behaviorKey,
+                remarks: remarks
+            };
+
+            window.appState.records.push(newRecord);
+            saveToLocalStorage();
+            closeRecordModal();
+
+            const updatedRecords = getStudentRecords(studentUid);
+            const totalCount = updatedRecords.length;
+            const threshold = window.appState.followUpThreshold || 4;
+
+            renderAll();
+
+            if (totalCount > 0 && totalCount % threshold === 0) {
+                showCustomAlert(
+                    "⚠️ 觸發個案跟進通知 / ALERT",
+                    "Follow-up Required",
+                    `學生 <b>[${student.id}] ${student.name}</b> 的不當行為記錄已累計至 <b>${totalCount} 次</b> (為 ${threshold} 的倍數)。<br><br>請即時向該名學生作出輔導，並與家長或班主任跟進。`,
+                    "alert"
+                );
+            } else {
+                showCustomAlert("儲存成功", "Saved Successfully", `已成功為 <b>${student.name}</b> 增加 1 筆記錄。`, "success");
+            }
+        }
+
+        // === 12. 查看歷史記錄歷程 ===
+        function openHistoryModal(studentUid, event) {
+            if (event) event.stopPropagation();
+
+            const student = findStudentByUid(studentUid);
+            if (!student) return;
+
+            document.getElementById('history-student-info').innerHTML = `
+                <span class="font-bold text-yellow-300 mr-2">[${window.currentSelectedClass}]</span>
+                <span>班號 ${student.id} - 姓名: ${student.name}</span>
+            `;
+
+            const studentRecords = getStudentRecords(studentUid).sort((a,b) => new Date(b.date) - new Date(a.date));
+            const totalCount = studentRecords.length;
+
+            document.getElementById('history-total-count').textContent = totalCount;
+
+            const statusArea = document.getElementById('history-status-action-area');
+            statusArea.innerHTML = '';
+            
+            const isNeedFollowUp = checkStudentNeedsFollowUp(studentUid);
+            if (isNeedFollowUp) {
+                statusArea.innerHTML = `
+                    <span class="px-2 py-0.5 bg-rose-500 text-white font-bold text-[11px] rounded animate-pulse mb-1">
+                        需跟進 / FOLLOW UP
+                    </span>
+                    <button onclick="handleManualFollowUp('${studentUid}'); closeHistoryModal();" class="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded font-bold text-xs transition duration-150 shadow-sm">
+                        手動解除跟進
+                    </button>
+                `;
+            } else {
+                statusArea.innerHTML = `
+                    <span class="px-2 py-0.5 bg-emerald-500 text-white font-bold text-[11px] rounded">
+                        狀態良好 / NORMAL
+                    </span>
+                `;
+            }
+
+            const listContainer = document.getElementById('history-list');
+            listContainer.innerHTML = '';
+
+            if (studentRecords.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="text-center py-6 text-slate-400 text-xs">
+                        暫無任何行為記錄 / No records found
+                    </div>
+                `;
+            } else {
+                studentRecords.forEach((rec, idx) => {
+                    const behName = getBehaviorName(rec.behaviorKey);
+                    const item = document.createElement('div');
+                    item.className = "bg-slate-50 border border-slate-100 rounded-xl p-3 flex justify-between items-start text-xs sm:text-sm";
+                    
+                    item.innerHTML = `
+                        <div class="space-y-1 pr-4">
+                            <div class="flex items-center space-x-2">
+                                <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 font-semibold rounded text-[10px] border border-indigo-100">
+                                    #${totalCount - idx}
+                                </span>
+                                <span class="font-bold text-slate-700">${behName.zh}</span>
+                                <span class="text-slate-400 text-xs">${behName.en}</span>
+                            </div>
+                            ${rec.remarks ? `<p class="text-slate-600 italic bg-white/60 p-1.5 rounded border border-slate-100/50 mt-1">備註: ${rec.remarks}</p>` : ''}
+                        </div>
+                        <div class="flex flex-col items-end space-y-2 shrink-0">
+                            <span class="text-slate-500 text-xs flex items-center space-x-1">
+                                <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-400"></i>
+                                <span>${rec.date}</span>
+                            </span>
+                            <button onclick="deleteRecord('${rec.id}', '${studentUid}', event)" class="text-rose-500 hover:text-rose-600 hover:bg-rose-50 p-1 rounded transition duration-150" title="刪除記錄 / Delete">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    `;
+                    listContainer.appendChild(item);
+                });
+            }
+
+            document.getElementById('history-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('history-modal').classList.add('hidden');
+        }
+
+        function deleteRecord(recordId, studentUid, event) {
+            if (event) event.stopPropagation();
+
+            openConfirm(
+                "確定刪除此筆記錄？",
+                "Delete this record?",
+                "刪除此行為記錄後，該學生的累計記錄次數將會相應減少，其跟進狀態亦會自動重新計算。",
+                () => {
+                    window.appState.records = window.appState.records.filter(r => r.id !== recordId);
+                    
+                    const studentRecords = getStudentRecords(studentUid);
+                    const currentCount = studentRecords.length;
+                    if (window.appState.followUpsHandled[studentUid]) {
+                        window.appState.followUpsHandled[studentUid] = window.appState.followUpsHandled[studentUid].filter(count => count <= currentCount);
+                    }
+
+                    saveToLocalStorage();
+                    closeHistoryModal();
+                    renderAll();
+                    showCustomAlert("刪除成功", "Deleted", "該行為記錄已被移除。", "success");
+                }
+            );
+        }
+
+        // === 13. 系統設置 (System Settings) ===
+        function renderSettingsClasses() {
+            const container = document.getElementById('settings-class-list');
+            if (container) {
+                container.innerHTML = '';
+
+                if (window.appState.classes.length === 0) {
+                    container.innerHTML = `<span class="text-slate-400 text-xs block text-center py-4">請先新增班別 / No classes</span>`;
+                    return;
+                }
+
+                window.appState.classes.forEach(c => {
+                    const isSelected = c.id === window.currentEditingClass;
+                    const div = document.createElement('div');
+                    div.className = `flex justify-between items-center p-2.5 rounded-xl cursor-pointer transition duration-150 ${
+                        isSelected ? 'bg-indigo-50 border border-indigo-200' : 'bg-slate-50 border border-slate-100 hover:bg-slate-100'
+                    }`;
+                    div.onclick = () => selectClassForEditing(c.id);
+
+                    div.innerHTML = `
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="graduation-cap" class="w-4 h-4 text-indigo-600"></i>
+                            <span class="font-bold text-slate-800">${c.name}</span>
+                            <span class="text-[10px] text-slate-400 font-medium">(${window.appState.students[c.id]?.length || 0}人)</span>
+                        </div>
+                        <button onclick="deleteClass('${c.id}', event)" class="p-1 text-slate-400 hover:text-rose-500 rounded transition duration-150">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+            lucide.createIcons();
+        }
+
+        function selectClassForEditing(classId) {
+            window.currentEditingClass = classId;
+            const badge = document.getElementById('editing-class-badge');
+            if (badge) {
+                badge.textContent = `正在編輯班別：${classId}`;
+            }
+            renderSettingsClasses();
+            renderSettingsStudents();
+        }
+
+        function addClass() {
+            const input = document.getElementById('new-class-input');
+            const name = input.value.trim().toUpperCase();
+
+            if (!name) {
+                showCustomAlert("輸入錯誤", "Input Error", "班別名稱不可為空！", "error");
+                return;
+            }
+
+            if (window.appState.classes.some(c => c.id === name)) {
+                showCustomAlert("班別已存在", "Class Exists", "此班別名稱已存在，請使用其他名稱。", "error");
+                return;
+            }
+
+            const newClass = { id: name, name: name };
+            window.appState.classes.push(newClass);
+            window.appState.students[name] = [];
+            
+            window.currentEditingClass = name;
+            window.currentSelectedClass = name;
+
+            saveToLocalStorage();
+            input.value = '';
+            renderAll();
+            
+            selectClassForEditing(name);
+        }
+
+        function deleteClass(classId, event) {
+            if (event) event.stopPropagation();
+
+            openConfirm(
+                `確定刪除班別 ${classId} ？`,
+                `Confirming delete Class ${classId}?`,
+                `這會刪除該班別的<b>所有學生資料 (${window.appState.students[classId]?.length || 0} 名)</b> 及其<b>全部不當行為歷史記錄</b>，此操作將無法復原！`,
+                () => {
+                    window.appState.classes = window.appState.classes.filter(c => c.id !== classId);
+                    delete window.appState.students[classId];
+                    window.appState.records = window.appState.records.filter(r => r.classId !== classId);
+
+                    if (window.currentEditingClass === classId) {
+                        window.currentEditingClass = window.appState.classes.length > 0 ? window.appState.classes[0].id : '';
+                    }
+                    if (window.currentSelectedClass === classId) {
+                        window.currentSelectedClass = window.appState.classes.length > 0 ? window.appState.classes[0].id : '';
+                    }
+
+                    saveToLocalStorage();
+                    renderAll();
+                    if (window.currentEditingClass) {
+                        selectClassForEditing(window.currentEditingClass);
+                    }
+                }
+            );
+        }
+
+        function renderSettingsStudents() {
+            const tbody = document.getElementById('settings-student-list');
+            const badge = document.getElementById('editing-class-badge');
+            if (tbody) {
+                tbody.innerHTML = '';
+
+                if (!window.currentEditingClass) {
+                    if (badge) badge.textContent = '未選擇班別';
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="3" class="p-6 text-center text-slate-400 text-xs">請先於左側選擇/新增班級以管理學生</td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                if (badge) badge.textContent = `正在編輯班別：${window.currentEditingClass}`;
+
+                const classStudents = window.appState.students[window.currentEditingClass] || [];
+                if (classStudents.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="3" class="p-6 text-center text-slate-400 text-xs">此班別暫無學生。請使用下方工具新增學生。</td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                const sorted = [...classStudents].sort((a,b) => Number(a.id) - Number(b.id));
+
+                sorted.forEach(s => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-50 transition duration-150";
+                    tr.innerHTML = `
+                        <td class="p-2.5 font-bold text-slate-700">${s.id}</td>
+                        <td class="p-2.5 font-medium text-slate-800">${s.name}</td>
+                        <td class="p-2.5 text-right">
+                            <button onclick="deleteStudent('${s.uid}', event)" class="p-1 text-slate-400 hover:text-rose-600 rounded transition duration-150">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+            lucide.createIcons();
+        }
+
+        function addSingleStudent() {
+            if (!window.currentEditingClass) {
+                showCustomAlert("提示", "No Class Selected", "請先點擊左側「現有班級」清單以指定要新增學生的班別。", "error");
+                return;
+            }
+
+            const noInput = document.getElementById('new-student-no');
+            const nameInput = document.getElementById('new-student-name');
+
+            const id = parseInt(noInput.value, 10);
+            const name = nameInput.value.trim();
+
+            if (isNaN(id) || id <= 0) {
+                showCustomAlert("輸入錯誤", "Invalid Number", "請輸入有效的班號 (必須是大於 0 的整數)！", "error");
+                return;
+            }
+            if (!name) {
+                showCustomAlert("輸入錯誤", "Name Empty", "請輸入學生姓名！", "error");
+                return;
+            }
+
+            const classStudents = window.appState.students[window.currentEditingClass] || [];
+            if (classStudents.some(s => s.id === id)) {
+                showCustomAlert("班號已存在", "No. Duplicated", `班號 ${id} 已被佔用，請重新設定！`, "error");
+                return;
+            }
+
+            const newStudent = {
+                uid: 'std-' + window.currentEditingClass.toLowerCase() + '-' + id + '-' + Math.random().toString(36).substr(2, 4),
+                id: id,
+                name: name
+            };
+
+            window.appState.students[window.currentEditingClass].push(newStudent);
+            saveToLocalStorage();
+            
+            noInput.value = '';
+            nameInput.value = '';
+
+            renderAll();
+            selectClassForEditing(window.currentEditingClass);
+        }
+
+        function importBatchStudents() {
+            if (!window.currentEditingClass) {
+                showCustomAlert("提示", "No Class Selected", "請先點擊左側「現有班級」清單以指定欲批次匯入的班別。", "error");
+                return;
+            }
+
+            const textarea = document.getElementById('batch-student-input');
+            const content = textarea.value.trim();
+            if (!content) {
+                showCustomAlert("空內容", "Empty Content", "請輸入名單內容！", "error");
+                return;
+            }
+
+            const lines = content.split('\n');
+            let successCount = 0;
+            let skipCount = 0;
+
+            const classStudents = window.appState.students[window.currentEditingClass] || [];
+
+            lines.forEach(line => {
+                line = line.trim();
+                if (!line) return;
+
+                const parts = line.split(/[\s,]+/);
+                if (parts.length >= 2) {
+                    const id = parseInt(parts[0], 10);
+                    const name = parts.slice(1).join(' ');
+
+                    if (!isNaN(id) && name) {
+                        if (!classStudents.some(s => s.id === id)) {
+                            classStudents.push({
+                                uid: 'std-' + window.currentEditingClass.toLowerCase() + '-' + id + '-' + Math.random().toString(36).substr(2, 4),
+                                id: id,
+                                name: name
+                            });
+                            successCount++;
+                        } else {
+                            skipCount++;
+                        }
+                    } else {
+                        skipCount++;
+                    }
+                } else {
+                    skipCount++;
+                }
+            });
+
+            saveToLocalStorage();
+            textarea.value = '';
+            renderAll();
+            selectClassForEditing(window.currentEditingClass);
+
+            showCustomAlert(
+                "批量匯入完成",
+                "Batch Import Complete",
+                `成功匯入 <b>${successCount}</b> 名學生。${skipCount > 0 ? `<br>已跳過 <b>${skipCount}</b> 筆不合格式或班號重複的資料。` : ''}`,
+                "success"
+            );
+        }
+
+        function deleteStudent(studentUid, event) {
+            if (event) event.stopPropagation();
+
+            const student = findStudentByUid(studentUid);
+            if (!student) return;
+
+            openConfirm(
+                `確定刪除學生 [${student.id}] ${student.name}？`,
+                `Confirming delete student?`,
+                `這會永久刪除該學生及其<b>所有不當行為記錄</b>。`,
+                () => {
+                    window.appState.students[window.currentEditingClass] = window.appState.students[window.currentEditingClass].filter(s => s.uid !== studentUid);
+                    window.appState.records = window.appState.records.filter(r => r.studentUid !== studentUid);
+                    delete window.appState.followUpsHandled[studentUid];
+
+                    saveToLocalStorage();
+                    renderAll();
+                    selectClassForEditing(window.currentEditingClass);
+                }
+            );
+        }
+
+        function clearClassStudents() {
+            if (!window.currentEditingClass) return;
+
+            openConfirm(
+                `確定要清空 ${window.currentEditingClass} 的所有學生名單嗎？`,
+                `Clear all students in Class ${window.currentEditingClass}?`,
+                `此操作將刪除此班的所有學生及其所有課堂行為記錄。這非常危險且不可逆！`,
+                () => {
+                    const studentUids = (window.appState.students[window.currentEditingClass] || []).map(s => s.uid);
+                    
+                    window.appState.students[window.currentEditingClass] = [];
+                    window.appState.records = window.appState.records.filter(r => !studentUids.includes(r.studentUid));
+                    studentUids.forEach(uid => {
+                        delete window.appState.followUpsHandled[uid];
+                    });
+
+                    saveToLocalStorage();
+                    renderAll();
+                    selectClassForEditing(window.currentEditingClass);
+                    showCustomAlert("已清空", "Cleared", `班別 ${window.currentEditingClass} 的學生名單已全部清空。`, "success");
+                }
+            );
+        }
+
+        // === 14. 更新跟進門檻限制 ===
+        function updateFollowUpThreshold() {
+            const input = document.getElementById('follow-up-threshold-input');
+            const val = parseInt(input.value, 10);
+            
+            if (!isNaN(val) && val >= 1) {
+                window.appState.followUpThreshold = val;
+                saveToLocalStorage();
+                renderAll();
+                showCustomAlert("更新成功", "Threshold Updated", `跟進臨界值已成功設定為：每累積 <b>${val} 次</b> 觸發一次跟進。`, "success");
+            } else {
+                showCustomAlert("輸入錯誤", "Invalid Value", "跟進次數必須是不少於 1 的正整數！", "error");
+                input.value = window.appState.followUpThreshold || 4;
+            }
+        }
+
+        function renderBehaviorCategories() {
+            const container = document.getElementById('behavior-category-list');
+            if (container) {
+                container.innerHTML = '';
+
+                window.appState.behaviors.forEach(b => {
+                    const div = document.createElement('div');
+                    div.className = "flex justify-between items-center p-2.5 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100/80 transition";
+                    
+                    div.innerHTML = `
+                        <div>
+                            <span class="block text-xs sm:text-sm font-bold text-slate-800">${b.zh}</span>
+                            <span class="block text-[10px] text-slate-400">${b.en}</span>
+                        </div>
+                        <button onclick="deleteBehaviorCategory('${b.key}', event)" class="p-1 text-slate-400 hover:text-rose-500 rounded transition duration-150">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+            lucide.createIcons();
+        }
+
+        function addBehaviorCategory() {
+            const zhInput = document.getElementById('new-beh-zh');
+            const enInput = document.getElementById('new-beh-en');
+
+            const zhName = zhInput.value.trim();
+            const enName = enInput.value.trim();
+
+            if (!zhName && !enName) {
+                showCustomAlert("輸入未全", "Fields Empty", "中文或英文名稱至少填寫一項！", "error");
+                return;
+            }
+
+            const newKey = 'beh-' + Date.now() + '-' + Math.random().toString(36).substr(2, 3);
+            
+            const finalZh = zhName || enName;
+            const finalEn = enName || zhName;
+
+            window.appState.behaviors.push({
+                key: newKey,
+                zh: finalZh,
+                en: finalEn
+            });
+
+            saveToLocalStorage();
+            zhInput.value = '';
+            enInput.value = '';
+            renderAll();
+        }
+
+        function deleteBehaviorCategory(key, event) {
+            if (event) event.stopPropagation();
+
+            openConfirm(
+                "確定刪除此不當行為類別？",
+                "Delete this category?",
+                "刪除後，現有學生與此行為相關的歷史記錄不會被消除，但老師之後在課堂記錄中將無法再次選取此類別。",
+                () => {
+                    window.appState.behaviors = window.appState.behaviors.filter(b => b.key !== key);
+                    saveToLocalStorage();
+                    renderAll();
+                }
+            );
+        }
+
+        // === 15. 系統資料匯入與匯出 ===
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(window.appState, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            
+            const today = getTodayDateString();
+            downloadAnchor.setAttribute("download", `Student_Behavior_Tracker_Backup_${today}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedState = JSON.parse(e.target.result);
+                    
+                    if (importedState.classes && importedState.students && importedState.behaviors && importedState.records) {
+                        window.appState = {
+                            classes: importedState.classes,
+                            students: importedState.students,
+                            behaviors: importedState.behaviors,
+                            records: importedState.records,
+                            followUpsHandled: importedState.followUpsHandled || {},
+                            followUpThreshold: importedState.followUpThreshold || 4
+                        };
+                        saveToLocalStorage();
+                        
+                        if (window.appState.classes.length > 0) {
+                            window.currentSelectedClass = window.appState.classes[0].id;
+                            window.currentEditingClass = window.appState.classes[0].id;
+                        } else {
+                            window.currentSelectedClass = '';
+                            window.currentEditingClass = '';
+                        }
+                        
+                        renderAll();
+                        showCustomAlert("匯入成功", "Import Success", "系統數據已成功還原備份！", "success");
+                    } else {
+                        showCustomAlert("匯入失敗", "Import Failed", "上傳的檔案並非有效的系統數據，請檢查格式是否正確。", "error");
+                    }
+                } catch (err) {
+                    showCustomAlert("讀取錯誤", "Error reading file", "無法解析所選取的 JSON 檔案。", "error");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function confirmResetSystem() {
+            openConfirm(
+                "🚨 您確定要初始化整個系統嗎？",
+                "Reset Entire System Data?",
+                "這會<b>永久抹去所有班級、學生名單以及行為歷程記錄</b>。此操作無法撤回！",
+                () => {
+                    localStorage.removeItem('student_behavior_tracker_data');
+                    localStorage.removeItem('saved_sync_code');
+                    window.appState = {
+                        classes: [], 
+                        students: {}, 
+                        behaviors: [
+                            { key: 'missing_textbook', zh: '欠帶課本', en: 'Textbook Missing' },
+                            { key: 'unprepared', zh: '欠備課', en: 'Unprepared for Class' },
+                            { key: 'reading_inattentive', zh: 'Reading time 沒有專心閱讀', en: 'Inattentive during Reading Time' },
+                            { key: 'missing_handbook_writeup', zh: '欠寫手冊', en: 'Handbook Unwritten' },
+                            { key: 'missing_parent_signature', zh: '欠家長簽名', en: 'Parent Signature Missing' },
+                            { key: 'missing_handbook', zh: '欠帶手冊', en: 'Handbook Missing' },
+                            { key: 'inattentive_in_class', zh: '上課不專心', en: 'Inattentive in Class' },
+                            { key: 'poor_attitude', zh: '學習態度不認真', en: 'Poor Learning Attitude' }
+                        ],
+                        records: [], 
+                        followUpsHandled: {}, 
+                        followUpThreshold: 4 
+                    };
+                    saveToLocalStorage();
+                    
+                    window.currentSelectedClass = '';
+                    window.currentEditingClass = '';
+                    
+                    renderAll();
+                    showCustomAlert("系統已重設", "System Reset", "系統已成功恢復至預設乾淨狀態。", "success");
+                }
+            );
+        }
+
+        // === 16. 工具助手與對話框控制 ===
+        function findStudentByUid(uid) {
+            for (const classId in window.appState.students) {
+                const s = window.appState.students[classId].find(std => std.uid === uid);
+                if (s) return s;
+            }
+            return null;
+        }
+
+        function getBehaviorName(key) {
+            const b = window.appState.behaviors.find(beh => beh.key === key);
+            if (b) return { zh: b.zh, en: b.en };
+            return { zh: key, en: key };
+        }
+
+        function getTodayDateString() {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        }
+
+        function showCustomAlert(title, subtitle, message, type = "info") {
+            const alertModal = document.getElementById('custom-alert');
+            const alertTitle = document.getElementById('alert-title');
+            const alertSubtitle = document.getElementById('alert-subtitle');
+            const alertMessage = document.getElementById('alert-message');
+            const iconContainer = document.getElementById('alert-icon-container');
+
+            alertTitle.innerHTML = title;
+            alertSubtitle.textContent = subtitle;
+            alertMessage.innerHTML = message;
+
+            if (type === 'error') {
+                iconContainer.className = "mx-auto w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center border border-rose-100 text-rose-500";
+                iconContainer.innerHTML = `<i data-lucide="x-circle" class="w-10 h-10"></i>`;
+            } else if (type === 'success') {
+                iconContainer.className = "mx-auto w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center border border-emerald-100 text-emerald-500";
+                iconContainer.innerHTML = `<i data-lucide="check-circle" class="w-10 h-10 animate-pulse"></i>`;
+            } else if (type === 'alert') {
+                iconContainer.className = "mx-auto w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center border border-amber-300 text-amber-600 shadow-inner";
+                iconContainer.innerHTML = `<i data-lucide="bell" class="w-10 h-10 animate-bounce text-amber-500"></i>`;
+            } else {
+                iconContainer.className = "mx-auto w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center border border-indigo-100 text-indigo-500";
+                iconContainer.innerHTML = `<i data-lucide="info" class="w-10 h-10"></i>`;
+            }
+
+            alertModal.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        // 關閉系統內置自訂通知
+        function closeCustomAlert() {
+            const alertModal = document.getElementById('custom-alert');
+            if (alertModal) {
+                alertModal.classList.add('hidden');
+            }
+        }
+
+        function openConfirm(titleZh, titleEn, message, callback) {
+            window.confirmCallback = callback;
+            const confirmModal = document.getElementById('custom-confirm');
+            if (confirmModal) {
+                document.getElementById('confirm-title').textContent = titleZh;
+                document.getElementById('confirm-subtitle').textContent = titleEn;
+                document.getElementById('confirm-message').innerHTML = message;
+                confirmModal.classList.remove('hidden');
+            }
+        }
+
+        function closeConfirm(isConfirmed) {
+            const confirmModal = document.getElementById('custom-confirm');
+            if (confirmModal) {
+                confirmModal.classList.add('hidden');
+            }
+            if (isConfirmed && window.confirmCallback) {
+                window.confirmCallback();
+            }
+            window.confirmCallback = null;
+        }
+
+        document.getElementById('confirm-yes-btn').addEventListener('click', () => {
+            closeConfirm(true);
+        });
+
+        // 啟動本機讀取並進行初始渲染
+        loadFromLocalStorage();
+        renderAll();
+    </script>
+</body>
+</html>
