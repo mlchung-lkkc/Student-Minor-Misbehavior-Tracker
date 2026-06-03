@@ -126,9 +126,6 @@
                     <!-- 動態渲染學生卡片 -->
                 </div>
                 
-                <!-- 避開底部批量控制欄的空白佔位符 / Dynamic safe spacer for bottom floating bar -->
-                <div id="batch-spacer" class="h-0 transition-all duration-300"></div>
-                
                 <!-- 無學生提示 -->
                 <div id="no-students-view" class="hidden bg-slate-100/50 rounded-2xl py-16 px-4 text-center border border-dashed border-slate-300">
                     <i data-lucide="user-plus" class="w-12 h-12 text-slate-400 mx-auto mb-3"></i>
@@ -1086,12 +1083,6 @@
                 btnCompact.classList.remove('hidden');
                 batchBar.classList.remove('hidden');
                 
-                // 顯示安全佔位符以防被懸浮列阻擋 (手機版需較高空間以避開堆疊的控制項)
-                const spacer = document.getElementById('batch-spacer');
-                if (spacer) {
-                    spacer.className = "h-80 sm:h-32 transition-all duration-300";
-                }
-                
                 document.getElementById('batch-record-date').value = getTodayDateString();
                 document.getElementById('batch-remarks').value = '';
                 document.getElementById('batch-selected-count').textContent = '0';
@@ -1103,12 +1094,6 @@
                 btnText.textContent = "開啟批量模式 / Batch Mode";
                 btnCompact.classList.add('hidden');
                 batchBar.classList.add('hidden');
-                
-                // 隱藏安全佔位符，還原介面高度
-                const spacer = document.getElementById('batch-spacer');
-                if (spacer) {
-                    spacer.className = "h-0 transition-all duration-300";
-                }
                 
                 modeDesc.textContent = "點擊學生可直接快速新增記錄 / Click card to add record";
             }
